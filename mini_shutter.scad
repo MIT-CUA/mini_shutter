@@ -73,7 +73,7 @@ module motor_4mm_coreless_dc(show=true, drill=false, theta=-45){
      }
      union(){
 	  extra_dz = (drill ? 8 : 0);				// extra tube length when drilling, for wires to exit
-	  extra_dia = (drill ? -0.2 : 0);			// smaller diameter when drilling, so motor fits snugly in motor housing
+	  extra_dia = (drill ? -0 : 0);			// possibly different diameter when drilling, so motor fits snugly in motor housing
 	  translate([0, 0, -oal + cam_dz]){
 	       translate([0, 0, -extra_dz]) color("silver"){
 		    scale([1 + (drill ? 0.1 : 0), 1, 1])	// for holder, compensate for underhang from top when printing
@@ -134,7 +134,7 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, 
      base_xoff = -7;
      beam_clear_dia = 4;
 
-     theta_open = 0;
+     theta_open = 0 + 4;
      theta_closed = -52;
      theta = openclose * theta_closed;
 
@@ -146,11 +146,11 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, 
      shutter_blade_dia = 5;
      shutter_blade_dtheta = 110;
 
-     endstop_angle = -70;
+     endstop_angle = -80;
      endstop_yoff = 5;
      endstop_zoff = -2;
      endstop_len = 5;
-     endstop_wid = 6;
+     endstop_wid = 7;
      endstop_height = 5;
 
      module motor_position(){
@@ -224,7 +224,7 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, 
 	  }
 	  // cut out endstop based on two positions of the shutter blade
 	  color("purple"){
-	       for (th=[theta_open, theta_closed]){
+	       for (th=[theta_open + 2, theta_closed - 2]){
 		    motor_position()
 			 rotate([0, 0, th])
 			 shutter_blade(shutter_blade_dtheta);
@@ -265,8 +265,7 @@ module animation_full_model(){
 // mini_shutter(show_mount=true, show_motor=true, show_blade=false, openclose=0);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
 
-// mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);
-
+// mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);			// for showing just blade
 mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
 
 // print_blade();

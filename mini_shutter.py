@@ -35,7 +35,7 @@ sw2 = Debouncer(the_button2)
 led = neopixel.NeoPixel(board.GP16, 1)
 led.brightness = 0.3
 
-print("test_motor.py")
+print("mini_shutter.py")
 
 def shutter_open():
     led[0] = (255, 0, 0)
