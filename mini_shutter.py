@@ -22,8 +22,11 @@ the_button2 = DigitalInOut(BUTTON_PIN2)		# button digital input
 the_button2.direction = Direction.INPUT
 the_button2.pull = Pull.UP
 
-motor_open = DigitalInOut(board.GP7)
-motor_close = DigitalInOut(board.GP6)
+# motor_open = DigitalInOut(board.GP7)
+# motor_close = DigitalInOut(board.GP6)
+
+motor_open = DigitalInOut(board.GP2)
+motor_close = DigitalInOut(board.GP4)
 motor_open.direction = Direction.OUTPUT
 motor_close.direction = Direction.OUTPUT
 motor_open.value = False
