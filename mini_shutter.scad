@@ -39,13 +39,14 @@ screw_self_tap_dia_8_32 = screw_tap_dia_8_32 + 0.5;		// self-tapping for 8-32
 // -----------------------------------------------------------------------------
 // mini 4mm coreless dc motor
 
-module motor_4mm_coreless_dc(show=true, drill=false, theta=-45){
+module motor_4mm_coreless_dc(show=true, drill=false, theta=-45, drill_slot=true, mount_dia_extra=0){
      //
      // motor pointing up towards +z, positioned with bottom of cam
      // (closest side of cam to motor) at origin.  shaft has a cam on it.
      //
      // theta = angle of motor cam
-     //
+     // drill_slot = include slot for motor housing clamp
+     // 
      body_dz = 8.2;
      shaft_dia = 0.75;
      cam_outer_dia = 4.0;
@@ -72,13 +73,13 @@ module motor_4mm_coreless_dc(show=true, drill=false, theta=-45){
 	  }
      }
      union(){
-	  extra_dz = (drill ? 8 : 0);				// extra tube length when drilling, for wires to exit
-	  extra_dia = (drill ? -0 : 0);			// possibly different diameter when drilling, so motor fits snugly in motor housing
+	  extra_dz = (drill ? 8 : 0);		// extra tube length when drilling, for wires to exit
+	  extra_dia = mount_dia_extra;		// possibly different diameter when drilling, so motor fits snugly in motor housing
 	  translate([0, 0, -oal + cam_dz]){
 	       translate([0, 0, -extra_dz]) color("silver"){
 		    scale([1 + (drill ? 0.1 : 0), 1, 1])	// for holder, compensate for underhang from top when printing
 			 cylinder(d=4 + extra_dia, h=body_dz + extra_dz);	// main cylindrical body of motor
-		    if (drill){
+		    if (drill && drill_slot){
 			 // cut slot along side of motor, so the motor housing can hold motor with natural spring clamp action
 			 translate([-slot_dx, -slot_dy/2, 0])
 			      cube([slot_dx, slot_dy, body_dz + extra_dz]);
@@ -112,9 +113,143 @@ module baseplate_mount_holes(slen=5){
 }
 
 // -----------------------------------------------------------------------------
+// controller electronics
+
+module controller_pcb(show=true, drill=false, holes=false){
+     // PCB in XY plane with origin on bottom side at y-midpoint along board edge
+     // pointing along -x direction
+     pcb_dx = 29.2;
+     pcb_dy = 40.35;
+     pcb_thick = 2;
+
+     mount_screw_dia = 1.25;
+     mount_screw_head_dia = 5;
+
+     if (show){
+	  rotate([0, 0, 90])
+	       translate([-pcb_dx/2, -pcb_dy*0, 0])
+	       import("electronics/mini_shutter_driver v1.stl");
+     }
+
+     module mounting_holes(zoff=0){
+	  for(xy=[ [-3.83, 9.5], [-25.4, 9.5+2.54] ]){
+	       translate([xy[0], xy[1], zoff])
+		    children();
+	       }
+     }
+
+     if (drill){
+	  if (1){
+	       slot_width = pcb_dx + 1.5;
+	       translate([ -pcb_dy, -slot_width/2, 0]){
+		    color("pink"){
+			 cube([pcb_dy, slot_width, pcb_thick]);			// PCB
+		    }
+		    color("orange"){					// components on PCB
+			 rim = 1.2;
+			 comp_thick = 7;
+			 translate([-rim, rim, -0.01])
+			      cube([pcb_dy, pcb_dx-2*rim, comp_thick]);		// top-side components
+		    }
+		    difference(){
+			 color("brown"){					// bottom-side components on PCB
+			      rim = 1.2;
+			      comp_thick = 3;
+			      translate([-rim, rim, -comp_thick])
+				   cube([pcb_dy, pcb_dx-2*rim, comp_thick]);		// bottom-side components
+			 }
+			 color("red"){
+			      translate([ pcb_dy, slot_width/2, -3]){
+				   mounting_holes(){
+					cylinder(d1=6, d2=4, h=3);		// feet for mounting screws
+				   }
+			      }
+			 }
+		    }
+	       }
+	  }
+	  color("red"){
+	       mounting_holes(zoff=-10)
+		    cylinder(d=mount_screw_dia, h=20);		// screw holes
+	       mounting_holes(zoff=0)
+		    cylinder(d=mount_screw_head_dia, h=20);		// screw head holes
+	  }
+     }
+
+     if (holes){
+	  mounting_holes();
+     }
+}
+
+module electronics_mount(show=true, show_bottom=false, show_electronics=false){
+     //
+     // mount for control electronics PCB, oriented in lab frame (of final optical shutter).
+     // holds PCB from outer rim, to allow space for components (on both sides of PCB),
+     // including the RP2040 module.
+     // Open at top for USB-C connector
+     // Open at front for push-buttons
+     //
+     // if show_bottom then make rectangle for bottom of mount (for hull to something else)
+     //
+     mount_dy = 35;
+     mount_dx = 8;
+     mount_dz = 40 - 9;
+     mount_xoff = -2;
+     pcb_zoff = 3;
+
+     module epos(){
+	  translate([0, 0, pcb_zoff])
+	       rotate([0, 90, 0])
+	       children();
+     }
+
+     module bottom(){
+	  translate([-mount_dx/2, -mount_dy/2, 0])
+	       cube([mount_dx, mount_dy, 0.1]);
+     }
+
+     if (show){
+	  difference(){
+	       sr_zoff = 24;	// strain relief z-offset
+	       sr_yoff = 3;
+	       sr_od = mount_dx-1;
+	       sr_id = 4;
+	       sr_dz = 3;
+	       union(){
+		    translate([-mount_dx/2, -mount_dy/2, 0])
+			 color("blue")
+			 cube([mount_dx, mount_dy, mount_dz]);
+		    difference(){
+			 hull(){
+			      translate([0, mount_dy/2 + sr_yoff, sr_zoff])
+				   cylinder(d=sr_od, h=sr_dz);
+			      translate([0, 0, sr_zoff-sr_dz - 3])
+				   bottom();
+			 }
+			 translate([0, mount_dy/2 + sr_yoff, sr_zoff-10])
+			      color("red")
+			      cylinder(d=sr_id, h=20);
+		    }
+	       }
+	       epos()
+		    controller_pcb(show=false, drill=true);
+	  }
+     }
+     if (show_bottom){
+	  bottom();
+     }
+     if (show_electronics){
+	  epos()
+	       controller_pcb(show=true, drill=false);
+     }
+}
+
+// -----------------------------------------------------------------------------
 // shutter with mount
 
-module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, drill=false, openclose=0){
+module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
+		    drill=false, openclose=0, include_emount=true,
+		    show_electronics=false){
      //
      // beam goes along +x, at z=0
      // optical center is center of shutter hole for beam
@@ -126,32 +261,32 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, 
      base_dy = 15.2;
      base_dz = 4;
      motor_housing_dia = 6.5;
-     mhd_dz = 8;
+     mhd_dz = 8 - 3;
      mhd_xoff = -0.85;
      motor_zoff = 0;
-     motor_yoff = -6;
+     motor_yoff = -6 - 1;		// how far motor axis is away from the optical axis
      motor_xoff = -1;
      base_xoff = -7;
-     beam_clear_dia = 4;
+     beam_clear_dia = 4 + 1;
 
-     theta_open = 0 + 4;
-     theta_closed = -52;
-     theta = openclose * theta_closed;
+     theta_closed = 0 + 4;		// angle at which shutter is closed
+     theta_opened = -52 - 4 - 10;	// angle at which shutter is opened
+     theta = (openclose ? theta_opened : theta_closed);
 
      shutter_zoff = 0.2;
      shutter_center_thick = 2.6;
      shutter_center_dia = 6;
      shutter_blade_thick = 0.5;
      shutter_blade_yoff = 6;
-     shutter_blade_dia = 5;
-     shutter_blade_dtheta = 110;
+     shutter_blade_dia = 5 + 2;		// diameter of circle blocking laser
+     shutter_blade_dtheta = 110 + 20;	// angle between the two blades of the shutter 
 
-     endstop_angle = -80;
-     endstop_yoff = 5;
-     endstop_zoff = -2;
-     endstop_len = 5;
-     endstop_wid = 7;
-     endstop_height = 5;
+     endstop_angle = -80 - 20;	// angle in lab frame where endstop should be placed, with 0 - beam, -90 = baseplate
+     endstop_yoff = 5 + 2;	// offset in motor frame, froom motor axis
+     endstop_zoff = -2;		// z offset of endstop rectangle, in motor frame
+     endstop_len = 5;		// z-height of endstop rectangle
+     endstop_wid = 7;		// in the lab frame, size along y-axis (transverse to laser beam)
+     endstop_height = 5;	// actually its thickness
 
      module motor_position(){
 	  // move children to position (and orientation) of motor on the mini shutter
@@ -188,16 +323,45 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, 
 	  }
      }
 
+     module electronics_position(){
+	  //
+	  // move mount for electronics to final position in lab frame
+	  //
+	  emount_zoff = 6;
+	  emount_xoff = -14;
+	  translate([emount_xoff, 0, emount_zoff]) children();
+     }
+
      difference(){
 	  union(){
 	       if (show_mount){
-		    color("orange"){
-			 hull(){
-			      translate([-base_dx/2 + base_xoff, -base_dy/2, -dz])
-				   cube([base_dx, base_dy, base_dz]);		// cube for base
-			      motor_position()
-				   translate([0, 0, -mhd_dz+mhd_xoff]) cylinder(d=motor_housing_dia, h=mhd_dz);
+		    difference(){
+			 color("orange"){
+			      hull(){
+				   translate([-base_dx/2 + base_xoff, -base_dy/2, -dz])
+					cube([base_dx, base_dy, base_dz]);		// cube for base
+				   motor_position()
+					translate([0, 0, -mhd_dz+mhd_xoff]) cylinder(d=motor_housing_dia, h=mhd_dz);
+			      }
 			 }
+			 motor_position()
+			      motor_4mm_coreless_dc(show=false, drill=true);	// hole where motor goes
+		    }
+		    difference(){
+			 color("tomato"){
+			      hull(){
+				   translate([-base_dx/2 + base_xoff, -base_dy/2, -dz])
+					cube([base_dx, base_dy, 0.1]);		// cube for base
+				   electronics_position(){
+					electronics_mount(show=false, show_bottom=true);
+				   }
+			      }
+			      electronics_position(){
+				   electronics_mount(show=true, show_bottom=false);
+			      }
+			 }
+			 motor_position()
+			      motor_4mm_coreless_dc(show=false, drill=true, drill_slot=false, mount_dia_extra=1);	// hole where motor goes, no slot
 		    }
 		    color("brown"){	// endstop
 			 hull(){
@@ -216,21 +380,26 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true, 
 	  color("red"){
 	       translate([base_xoff, 0, -dz-0.1])
 		    baseplate_mount_holes();				// holes for 8-32 screw and 2mm pins
-	       motor_position()
-		    motor_4mm_coreless_dc(show=false, drill=true);	// hole where motor goes
 	       rotate([0, 90, 0])					// clearance tube for optical beam
-		    translate([0, 0, -15])
-		    cylinder(d=beam_clear_dia, h=30);
+		    translate([0, 0, -30])
+		    cylinder(d=beam_clear_dia, h=60);
 	  }
 	  // cut out endstop based on two positions of the shutter blade
 	  color("purple"){
-	       for (th=[theta_open + 2, theta_closed - 2]){
+	       for (th=[theta_closed + 2, theta_opened - 2]){
 		    motor_position()
 			 rotate([0, 0, th])
 			 shutter_blade(shutter_blade_dtheta);
 	       }
 	  }
      }
+
+     if (show_electronics){
+	  electronics_position(){
+	       electronics_mount(show=false, show_bottom=false, show_electronics=true);
+	  }
+     }
+
      if (show_blade){
 	  color("green"){
 	       motor_position()
@@ -260,14 +429,22 @@ module animation_full_model(){
 
 // motor_4mm_coreless_dc();
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true);
-// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=1);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=false, openclose=0);
+
+// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=1);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
+// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
 
 // mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);			// for showing just blade
-mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
+// mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
 
 // print_blade();
 
-// animation_full_model();
+animation_full_model();
+
+// controller_pcb(show=true, drill=false);
+// controller_pcb(show=true, drill=true);
+
+// electronics_mount(show=true);
+// electronics_mount(show=false, show_bottom=true);
