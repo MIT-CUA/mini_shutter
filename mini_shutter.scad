@@ -276,11 +276,12 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
      motor_zoff = 0;
      motor_yoff = (do_mirror ? -1 : 1) * (-6 - 1);		// how far motor axis is away from the optical axis
      motor_xoff = -1;
+     motor_theta = -45 - 20;				// angle of motor cam shaft
      base_xoff = -7;
      beam_clear_dia = 4 + 1;
 
-     theta_closed = 0 + 4 + 5;		// angle at which shutter is closed
-     theta_opened = -52 - 4 - 10 + 10 + 4;	// angle at which shutter is opened
+     theta_closed = 0 + 4 + 5 + 12;		// angle at which shutter is opened (closed if not mirrored)
+     theta_opened = -52 - 4 - 10 + 10 + 4;	// angle at which shutter is closed (opened if not mirrored)
      theta = (openclose ? theta_opened : theta_closed);
 
      shutter_zoff = 0.2;
@@ -291,11 +292,11 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
      shutter_blade_dia = 5 + 2;		// diameter of circle blocking laser
      shutter_blade_dtheta = 110 + 20;	// angle between the two blades of the shutter 
 
-     endstop_angle = -80 - 20 + 5 + 9;	// angle in lab frame where endstop should be placed, with 0 - beam, -90 = baseplate
-     endstop_yoff = 5 + 2 + 1;	// offset in motor frame, froom motor axis (this is in the z-direction in the lab frame)
+     endstop_angle = -80 - 20 + 5 + 9 + 5;	// angle in lab frame where endstop should be placed, with 0 - beam, -90 = baseplate
+     endstop_yoff = 5 + 2 + 1 + 0.1;	// offset in motor frame, froom motor axis (this is in the z-direction in the lab frame)
      endstop_zoff = -2;		// z offset of endstop rectangle, in motor frame
      endstop_len = 5 - 2;		// z-height of endstop rectangle
-     endstop_wid = 7 - 2 + 1;	// in the lab frame, size along y-axis (transverse to laser beam)
+     endstop_wid = 7 - 2 + 1 - 2;	// in the lab frame, size along y-axis (transverse to laser beam)
      endstop_height = 5 - 1;	// actually its thickness
 
      module motor_position(){
@@ -307,7 +308,7 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 	       children();
      }
 
-     module shutter_blade(dtheta=90){
+     module shutter_blade(dtheta=90, cutout_cam=true){
 	  // fits onto motor cam and blocks (or allows through) the optical beam.
 	  // has two arms: one which hits endstop when closed, and the other which
 	  // blocks the beam and also hits the endstop when open.
@@ -325,12 +326,14 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 	       }
 	  }
 
-	  mirror([0, 0, 0]){
+	  if (1){
 	       difference(){
 		    for(th=[0, -dtheta]){
 			 rotate([0, 0, th]) one_blade();
 		    }
-		    motor_4mm_coreless_dc(show=false, drill=true);	// cut out motor cam
+		    if (cutout_cam){
+			 motor_4mm_coreless_dc(show=false, drill=true, theta=motor_theta);	// cut out motor cam
+		    }
 	       }
 	  }
      }
@@ -357,7 +360,7 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 			      }
 			 }
 			 motor_position()
-			      motor_4mm_coreless_dc(show=false, drill=true);	// hole where motor goes
+			      motor_4mm_coreless_dc(show=false, drill=true, theta=motor_theta);	// hole where motor goes
 		    }
 		    difference(){
 			 color("skyblue"){
@@ -373,10 +376,11 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 			      }
 			 }
 			 motor_position()
-			      motor_4mm_coreless_dc(show=false, drill=true, drill_slot=false, mount_dia_extra=1);	// hole where motor goes, no slot
+			      motor_4mm_coreless_dc(show=false, drill=true, drill_slot=false, theta=motor_theta, mount_dia_extra=1);	// hole where motor goes, no slot
 		    }
 		    color("brown"){	// endstop
 			 hull(){
+			      base_slice_dy = 5;
 			      motor_position(){
 				   rotate([0, 0, endstop_angle])
 					translate([0, endstop_yoff, endstop_zoff])
@@ -384,7 +388,9 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 					cube_with_rounded_corners([endstop_wid, endstop_len, endstop_height], dia=3);	// endstop cube
 			      }
 			      translate([-base_dx/2 + base_xoff, -base_dy/2, -dz])
-				   cube([base_dx, base_dy, 0.1]);		// thin base for hull
+				   // cube([base_dx, base_dy, 0.1]);		// thin base for hull
+				   translate([0, base_dy-base_slice_dy, 0])
+				   cube([base_dx, base_slice_dy, 0.1]);		// thin base for hull
 			 }
 		    }
 	       }
@@ -401,7 +407,7 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 	       for (th=[theta_closed + 2, theta_opened - 2]){
 		    motor_position()
 			 rotate([0, 0, th])
-			 shutter_blade(shutter_blade_dtheta);
+			 shutter_blade(shutter_blade_dtheta, cutout_cam=false);
 	       }
 	  }
      }
@@ -421,7 +427,7 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
      }
      if (show_motor){
 	  motor_position()
-	       motor_4mm_coreless_dc(show=true, drill=false, theta=theta-45);
+	       motor_4mm_coreless_dc(show=true, drill=false, theta=theta+motor_theta);
      }
 }
 
@@ -445,7 +451,7 @@ module animation_full_model(){
 // mini_shutter(show_mount=true, show_motor=true, show_blade=false, openclose=0);
 
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=1);
-//  mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
+// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
 
 // mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);			// for showing just blade
