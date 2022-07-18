@@ -6,6 +6,7 @@
 
 import time
 import board
+import pwmio
 import usb_hid
 import neopixel
 import supervisor
@@ -25,11 +26,10 @@ the_button2.pull = Pull.UP
 # motor_open = DigitalInOut(board.GP7)
 # motor_close = DigitalInOut(board.GP6)
 
-motor_open  = [ DigitalInOut(board.GP0), DigitalInOut(board.GP1), DigitalInOut(board.GP2)]
-motor_close = [ DigitalInOut(board.GP4), DigitalInOut(board.GP5), DigitalInOut(board.GP6) ]
-for m in motor_open + motor_close:
-    m.direction = Direction.OUTPUT
-    m.value = False
+motor_open_pins  = [ board.GP0, board.GP1, board.GP2 ]
+motor_close_pins = [ board.GP4, board.GP5, board.GP6 ]
+motor_open  = [ pwmio.PWMOut(m, frequency=500, duty_cycle=0) for m in motor_open_pins ]
+motor_close = [ pwmio.PWMOut(m, frequency=500, duty_cycle=0) for m in motor_close_pins ]
 
 sw1 = Debouncer(the_button)
 sw2 = Debouncer(the_button2)
@@ -40,22 +40,28 @@ led.brightness = 0.3
 print("mini_shutter.py")
 
 def shutter_open():
-    led[0] = (255, 0, 0)
-    for m in motor_open:
-        m.value = True
+    led[0] = (25, 0, 0)
+    for m in motor_close:
+        m.duty_cycle = 0
+    for cycle in range(32768, 65535, 1000):
+        for m in motor_open:
+            m.duty_cycle = cycle
     time.sleep(0.3)
     for m in motor_open:
-        m.value = False
+        m.duty_cycle = 10000	# keep slightly powered
     led[0] = (0, 0, 0)
     print("open")
     
 def shutter_close():
-    led[0] = (0, 255, 0)
-    for m in motor_close:
-        m.value = True
+    led[0] = (0, 25, 0)
+    for m in motor_open:
+        m.duty_cycle = 0
+    for cycle in range(32768, 65535, 1000):
+        for m in motor_close:
+            m.duty_cycle = cycle
     time.sleep(0.3)
     for m in motor_close:
-        m.value = False
+        m.duty_cycle = 0
     led[0] = (0, 0, 0)
     print("close")
 

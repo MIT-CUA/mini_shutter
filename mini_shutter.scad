@@ -106,9 +106,17 @@ module baseplate_mount_holes(slen=5){
      pin_dy = 5.0;
      pin_dz = 2.2;
      cylinder(d=screw_clear_dia_8_32, h=20);
-     translate([0, 0, slen]) cylinder(d=screw_head_clear_dia_8_32, h=20);
+     translate([0, 0, slen]){
+	  cylinder(d=screw_head_clear_dia_8_32, h=20);
+     }
+     translate([0, 0, -0.01])
+	  cylinder(d1=screw_clear_dia_8_32 + 0.4, d2=screw_clear_dia_8_32, h=0.5);	// taper to compensate for print bed lip
      for(dy=[-1,1]){
-	  translate([0, dy*pin_dy, 0]) cylinder(d=pin_dia+0.1, h=pin_dz);
+	  translate([0, dy*pin_dy, 0]){
+	       cylinder(d=pin_dia+0.1, h=pin_dz);
+	       translate([0, 0, -0.01])
+		    cylinder(d1=pin_dia + 0.4, d2=pin_dia + 0.1, h=0.4);	// taper to compensate for print bed lip
+	  }
      }
 }
 
@@ -210,7 +218,7 @@ module electronics_mount(show=true, show_bottom=false, show_electronics=false){
 
      if (show){
 	  difference(){
-	       sr_zoff = 24;	// strain relief z-offset
+	       sr_zoff = 24 - 4;	// strain relief z-offset
 	       sr_yoff = 3;
 	       sr_od = mount_dx-1;
 	       sr_id = 4;
@@ -249,13 +257,15 @@ module electronics_mount(show=true, show_bottom=false, show_electronics=false){
 
 module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 		    drill=false, openclose=0, include_emount=true,
-		    show_electronics=false){
+		    show_electronics=false, do_mirror=1){
      //
      // beam goes along +x, at z=0
      // optical center is center of shutter hole for beam
      // base is dz below beam hight
      //
      // openclose = fraction from open (=0) to close (=1)
+     // do_mirror = 1 if motor should be put on the +y side (instead of on the -y side)
+     //             The +y side is the side closer to the RP2040's terminals for the motor
      //
      base_dx = 10;
      base_dy = 15.2;
@@ -264,13 +274,13 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
      mhd_dz = 8 - 3;
      mhd_xoff = -0.85;
      motor_zoff = 0;
-     motor_yoff = -6 - 1;		// how far motor axis is away from the optical axis
+     motor_yoff = (do_mirror ? -1 : 1) * (-6 - 1);		// how far motor axis is away from the optical axis
      motor_xoff = -1;
      base_xoff = -7;
      beam_clear_dia = 4 + 1;
 
-     theta_closed = 0 + 4;		// angle at which shutter is closed
-     theta_opened = -52 - 4 - 10;	// angle at which shutter is opened
+     theta_closed = 0 + 4 + 5;		// angle at which shutter is closed
+     theta_opened = -52 - 4 - 10 + 10 + 4;	// angle at which shutter is opened
      theta = (openclose ? theta_opened : theta_closed);
 
      shutter_zoff = 0.2;
@@ -281,12 +291,12 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
      shutter_blade_dia = 5 + 2;		// diameter of circle blocking laser
      shutter_blade_dtheta = 110 + 20;	// angle between the two blades of the shutter 
 
-     endstop_angle = -80 - 20;	// angle in lab frame where endstop should be placed, with 0 - beam, -90 = baseplate
-     endstop_yoff = 5 + 2;	// offset in motor frame, froom motor axis
+     endstop_angle = -80 - 20 + 5 + 9;	// angle in lab frame where endstop should be placed, with 0 - beam, -90 = baseplate
+     endstop_yoff = 5 + 2 + 1;	// offset in motor frame, froom motor axis (this is in the z-direction in the lab frame)
      endstop_zoff = -2;		// z offset of endstop rectangle, in motor frame
-     endstop_len = 5;		// z-height of endstop rectangle
-     endstop_wid = 7;		// in the lab frame, size along y-axis (transverse to laser beam)
-     endstop_height = 5;	// actually its thickness
+     endstop_len = 5 - 2;		// z-height of endstop rectangle
+     endstop_wid = 7 - 2 + 1;	// in the lab frame, size along y-axis (transverse to laser beam)
+     endstop_height = 5 - 1;	// actually its thickness
 
      module motor_position(){
 	  // move children to position (and orientation) of motor on the mini shutter
@@ -315,11 +325,13 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 	       }
 	  }
 
-	  difference(){
-	       for(th=[0, -dtheta]){
-		    rotate([0, 0, th]) one_blade();
+	  mirror([0, 0, 0]){
+	       difference(){
+		    for(th=[0, -dtheta]){
+			 rotate([0, 0, th]) one_blade();
+		    }
+		    motor_4mm_coreless_dc(show=false, drill=true);	// cut out motor cam
 	       }
-	       motor_4mm_coreless_dc(show=false, drill=true);	// cut out motor cam
 	  }
      }
 
@@ -348,9 +360,9 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
 			      motor_4mm_coreless_dc(show=false, drill=true);	// hole where motor goes
 		    }
 		    difference(){
-			 color("tomato"){
+			 color("skyblue"){
 			      hull(){
-				   translate([-base_dx/2 + base_xoff, -base_dy/2, -dz])
+				   translate([-base_dx/2 + base_xoff, -base_dy/2, -dz + base_dz])
 					cube([base_dx, base_dy, 0.1]);		// cube for base
 				   electronics_position(){
 					electronics_mount(show=false, show_bottom=true);
@@ -433,15 +445,15 @@ module animation_full_model(){
 // mini_shutter(show_mount=true, show_motor=true, show_blade=false, openclose=0);
 
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=1);
-// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
+//  mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
 
 // mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);			// for showing just blade
-// mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
+mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
 
 // print_blade();
 
-animation_full_model();
+// animation_full_model();
 
 // controller_pcb(show=true, drill=false);
 // controller_pcb(show=true, drill=true);
