@@ -38,6 +38,7 @@ led = neopixel.NeoPixel(board.GP16, 1)
 led.brightness = 0.3
 
 print("mini_shutter2.py")
+print("(h) help")
 
 def shutter_open():
     led[0] = (25, 0, 0)
@@ -81,22 +82,45 @@ def process_buttons():
             sw2.update()
             pass
 
+mode = ""
+opened = False
+last_time = time.monotonic()
+
 def oscillate():
-    shutter_open()
-    time.sleep(0.5)
-    shutter_close()
-    time.sleep(0.5)
+    global opened, last_time
+    now = time.monotonic()
+    if now-last_time < 0.5:
+        return
+    last_time = now
+    if opened:
+        shutter_close()
+        opened = False
+    else:
+        shutter_open()
+        opened = True
 
 def process_input():
+    global mode
     if not supervisor.runtime.serial_bytes_available:
         return
     value = input().strip()
-    if value=="o":
-        print("Oscillating...")
-        while True:
-            oscillate()
+    if value=="r":
+        print("running oscillation...")
+        mode = "osc"
+    elif value=="o":
+        mode = ""
+        shutter_open()
+    elif value=="c":
+        mode = ""
+        shutter_close()
+    elif value=="s":
+        mode = ""
+        print("stopped")
+    elif value=="h":
+        print("(o) open, (c) close, (r) run oscillate, (s) stop")
 
 while True:
     process_buttons()
     process_input()
-    # oscillate()
+    if mode=="osc":
+        oscillate()
