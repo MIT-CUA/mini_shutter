@@ -1,5 +1,5 @@
 #
-# mini_shutterpy: run 4mm coreless DC motor (used for an optical shutter)
+# mini_shutter2.py: run 4mm coreless DC motor (used for an optical shutter)
 # either back and forth - opening and closing repeatedly
 # or button pushes to open & close
 #
@@ -37,7 +37,7 @@ sw2 = Debouncer(the_button2)
 led = neopixel.NeoPixel(board.GP16, 1)
 led.brightness = 0.3
 
-print("mini_shutter.py")
+print("mini_shutter2.py")
 
 def shutter_open():
     led[0] = (25, 0, 0)
@@ -48,7 +48,8 @@ def shutter_open():
             m.duty_cycle = cycle
     time.sleep(0.3)
     for m in motor_open:
-        m.duty_cycle = 10000	# keep slightly powered
+        # m.duty_cycle = 10000	# keep slightly powered
+        m.duty_cycle = 0	# unpowered
     led[0] = (0, 0, 0)
     print("open")
     
@@ -86,6 +87,16 @@ def oscillate():
     shutter_close()
     time.sleep(0.5)
 
+def process_input():
+    if not supervisor.runtime.serial_bytes_available:
+        return
+    value = input().strip()
+    if value=="o":
+        print("Oscillating...")
+        while True:
+            oscillate()
+
 while True:
     process_buttons()
+    process_input()
     # oscillate()

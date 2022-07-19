@@ -452,10 +452,10 @@ module animation_full_model(){
 
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=1);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
-// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
+mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
 
 // mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);			// for showing just blade
-mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
+// mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
 
 // print_blade();
 
