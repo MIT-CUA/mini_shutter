@@ -2,7 +2,9 @@
 
 Mini optical shutter using 4mm coreless DC motor and RP2040 driver using CircuitPython.  Allows a computer to control an optical shutter via a USB-C connection.
 
-![Mini-shutter in action](VIDEO-shutter-demo.gif)
+![Mini-shutter in action](images/VIDEO-shutter-demo.gif)
+
+![Mini-shutter2 in action](images/VIDEO-mini-shutter2-2022-07-18a.gif)
 
 Uses a Waveshare <a
 href="https://www.waveshare.com/rp2040-zero.htm">RP2040-Zero board</a>
@@ -18,5 +20,5 @@ Motor should be connected to GP7 and GP6.  Each motor wire should be connected t
 
 1. Copy adafruit-circuitpython-raspberry_pi_pico-en_US-7.2.5.uf2 to the boot RPI drive
 2. Copy my-circuitpy-lib/* to CIRCUITPY/lib/
-3. Copy mini_shutter.py to CIRCUITPY/code.py
+3. Copy mini_shutter2.py to CIRCUITPY/code.py
 
