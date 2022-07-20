@@ -14,11 +14,16 @@ CircuitPython</a>.
 
 # Setup
 
-Motor should be connected to GP7 and GP6.  Each motor wire should be connected to ground through a 1K resistor in parallel with a 7 microfarad capacitor.  DC pulses from the digital outputs will drive an initially high (well, max 20mA) current into the capacitor, driving the motor and charging the capacitor.  The capacitor will then discharge slowly through the resistor.  No H-bridge is needed with this design.
+Mini-shutter driver schematic:
+
+![mini-shutter driver schematic](images/mini_shutter_driver_schematic.png)
+
+Note that the resistors and capacitors are optional, and the header for an optional RC servo is not used.
 
 # Loading code
 
-1. Copy adafruit-circuitpython-raspberry_pi_pico-en_US-7.2.5.uf2 to the boot RPI drive
-2. Copy my-circuitpy-lib/* to CIRCUITPY/lib/
-3. Copy mini_shutter2.py to CIRCUITPY/code.py
+1. Copy adafruit-circuitpython-raspberry_pi_pico-en_US-7.2.5.uf2 to the boot RPI-RP2 drive
+2. Wait for RP2040 to re-mount itself as CIRCUITPY
+3. Copy my-circuitpy-lib/* to CIRCUITPY/lib/
+4. Copy mini_shutter2.py to CIRCUITPY/code.py
 

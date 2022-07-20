@@ -13,12 +13,14 @@ import supervisor
 from digitalio import DigitalInOut, Direction, Pull
 from adafruit_debouncer import Debouncer
 
-BUTTON_PIN = board.GP27
+# BUTTON_PIN = board.GP27
+BUTTON_PIN = board.GP12
 the_button = DigitalInOut(BUTTON_PIN)		# button digital input
 the_button.direction = Direction.INPUT
 the_button.pull = Pull.UP
 
-BUTTON_PIN2 = board.GP15
+# BUTTON_PIN2 = board.GP15
+BUTTON_PIN2 = board.GP10
 the_button2 = DigitalInOut(BUTTON_PIN2)		# button digital input
 the_button2.direction = Direction.INPUT
 the_button2.pull = Pull.UP
@@ -41,7 +43,7 @@ print("mini_shutter2.py")
 print("(h) help")
 
 def shutter_open():
-    led[0] = (25, 0, 0)
+    led[0] = (5, 0, 0)
     for m in motor_close:
         m.duty_cycle = 0
     for cycle in range(32768, 65535, 1000):
@@ -55,7 +57,7 @@ def shutter_open():
     print("open")
     
 def shutter_close():
-    led[0] = (0, 25, 0)
+    led[0] = (0, 5, 0)
     for m in motor_open:
         m.duty_cycle = 0
     for cycle in range(32768, 65535, 1000):
