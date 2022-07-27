@@ -121,6 +121,12 @@ def process_input():
     elif value=="h":
         print("(o) open, (c) close, (r) run oscillate, (s) stop")
 
+    elif value=="state":
+        print(get_shutter_state())
+
+def get_shutter_state():
+    return opened
+
 while True:
     process_buttons()
     process_input()
