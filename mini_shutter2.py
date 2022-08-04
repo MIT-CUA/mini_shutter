@@ -70,19 +70,26 @@ def shutter_close():
     print("close")
 
 def process_buttons():
+    global mode
     sw1.update()		# button debouncing
     sw2.update()
     if not sw1.value:
         shutter_open()
         while not sw1.value:    # Wait for button to be released
+            if not sw2.value:	# if both buttons pushed
+                mode = "osc"
             sw1.update()
-            pass
+            sw2.update()
+        return
         
     if not sw2.value:
         shutter_close()
         while not sw2.value:    # Wait for button to be released
+            if not sw1.value:	# if both buttons pushed
+                mode = ""
+            sw1.update()
             sw2.update()
-            pass
+        return
 
 mode = ""
 opened = False
@@ -121,6 +128,17 @@ def process_input():
     elif value=="h":
         print("(o) open, (c) close, (r) run oscillate, (s) stop")
 
+# flicker LED to indicate power-up
+led[0] = (5, 0, 0)
+time.sleep(0.1)
+led[0] = (0, 5, 0)
+time.sleep(0.1)
+led[0] = (0, 0, 5)
+time.sleep(0.1)
+led[0] = (0, 0, 0)
+shutter_open()
+
+# main loop
 while True:
     process_buttons()
     process_input()
