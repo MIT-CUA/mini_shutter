@@ -41,4 +41,4 @@ Note that this shutter is normally closed, and requires a voltage to open.
 
 ## code
 
-See ![camera_shutter.py](camera_shutter.py)
+See [camera_shutter.py](camera_shutter.py)
