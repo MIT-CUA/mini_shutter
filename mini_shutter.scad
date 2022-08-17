@@ -58,17 +58,24 @@ module motor_4mm_coreless_dc(show=true, drill=false, theta=-45, drill_slot=true,
      slot_dx = 8;
      module cam(show=true, drill=false){
 	  color("blue"){
+	       acod = cam_outer_dia + (drill ? 0.9 - 0.9 : 0);
+	       rotate([-50, 0, 0])
+		    translate([-acod/2, -0.4 + cam_yoff, -0.3]){	// compensate for print burr - flat side
+			 color("red") cube([acod, 0.5, 0.7]);
+		    }
 	       cylinder(d=cam_shaft_dia, h=cam_dz + (drill ? 1 : 0) );	// cam center - on shaft
+	       cylinder(d1=cam_shaft_dia + (drill ? 0.9 + 0.4 : 0), d2=cam_shaft_dia, h=0.6 );	// cam center - on shaft - compensate for print plate burr
 	       difference(){
 		    union(){
-			 cylinder(d1=cam_outer_dia + (drill ? 0.4 : 0),	// compensate for burr on print plate
-				  d2=cam_outer_dia + (drill ? 0.1 : 0),
-				  h=0.4);
-			 cylinder(d=cam_outer_dia + (drill ? 0.1 : 0),
+			 cylinder(d1=cam_outer_dia + (drill ? 0.9 + 0.2 : 0),	// compensate for burr on print plate
+				  d2=cam_outer_dia + (drill ? 0.0 : 0),
+				  h=0.6);
+			 cylinder(d=cam_outer_dia + (drill ? 0.0 : 0),
 				  h=cam_dz + (drill ? 1 : 0));
 		    }
-		    translate([-5, -10 + cam_yoff, -1])
+		    translate([-5, -10 + cam_yoff, -1]){
 			 color("red") cube([10, 10, 10]);
+		    }
 	       }
 	  }
      }
@@ -419,7 +426,8 @@ module mini_shutter(dz=12.7, show_mount=true, show_motor=true, show_blade=true,
      }
 
      if (show_blade){
-	  color("green"){
+	  // color("green"){
+	  union(){
 	       motor_position()
 		    rotate([0, 0, theta])
 		    shutter_blade(shutter_blade_dtheta);
@@ -452,12 +460,12 @@ module animation_full_model(){
 
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=1);
 // mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0);
-mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
+// mini_shutter(show_mount=true, show_motor=true, show_blade=true, openclose=0, show_electronics=true);
 
 // mini_shutter(show_mount=false, show_motor=false, show_blade=true, openclose=0);			// for showing just blade
 // mini_shutter(show_mount=true, show_motor=false, show_blade=false, openclose=0);		// for printing mount
 
-// print_blade();
+print_blade();
 
 // animation_full_model();
 
