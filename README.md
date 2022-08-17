@@ -37,7 +37,11 @@ Camera optical shutter using DC rotating electromagnet digital camera shutter fr
 
 ![Camera-shutter in action](images/VIDEO-camera-shutter-blinking-2022-08-17c.gif)
 
-Note that this shutter is normally closed, and requires a voltage to open.
+Note that this shutter is normally closed, and requires a voltage to open.  The shutter springs back closed by itself when the voltage is removed.
+
+![camera shutter part](images/PHOTO-camera-shutter-part.png)
+
+Also, the camera shutter module has another solenoid which moves some kind of filter (or polarizer) into (and out of) the beam path, when energized (or energized in the reverse direction).
 
 ## code
 
