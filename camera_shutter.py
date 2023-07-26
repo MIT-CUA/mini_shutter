@@ -6,6 +6,8 @@
 # - filter  (bot): GP2 & GP4 -- direction changes inserted/removed
 #
 
+# new code in `/ndsp/main.py` and `/ndsp/shutter.py`/`/ndsp/my-circuitpy-lib/shutter.py`
+
 import time
 import board
 import pwmio
