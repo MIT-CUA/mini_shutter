@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2022-07-10T19:24:11Z",
+        "GenerationSoftware": {
+            "Application": "EAGLE",
+            "Vendor": "Autodesk",
+            "Version": "9.7.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.57,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "mini_shutter_driver"
+        },
+        "Owner": "Isaac Chuang <ichuang@mit.edu>",
+        "Size": {
+            "X": 29.19,
+            "Y": 40.31
+        }
+    }
+}
