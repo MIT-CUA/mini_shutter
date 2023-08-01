@@ -4,18 +4,22 @@ from datetime import datetime
 import threading
 import os
 import numpy
+import matplotlib
+from matplotlib import pyplot as plt
+
 
 class MiniShutter:
     """For controlling mini shutter
     
     see https://github.mit.edu/quanta/mini_shutter for detail on the shutters
     """
-    def __init__(self, serial_port='/dev/ttyACM6', baudrate=9600, timeout=.1, check_delay=0.1):
-        self.shutter = serial.Serial(port=serial_port, baudrate=baudrate, timeout=.1)
+    def __init__(self, serial_port='/dev/ttyACM6', baudrate=9600, timeout=0.1, check_delay=0.1):
+        self.shutter = serial.Serial(port=serial_port, baudrate=baudrate, timeout=timeout)
 
         self.check_delay = check_delay
 
         self.last_data_frame = []
+        self.Y = [0] * 64
 
         self._read_thread = threading.Thread(target=self.begin_reading, daemon=True)
         self._read_thread.start()
@@ -23,30 +27,19 @@ class MiniShutter:
     # reads serial data from shutter (such as print statements)
     # includes data this sends to it
     def begin_reading(self):
-        # Maybe just read characters from shutter for a bit so that its output stabilizes
-        # start = time.monotonic()
-
-        # while time.monotonic() - start < 10:
-        #     for line in self.shutter.readlines():
-        #         print(line, end="")
-            
-        #     time.sleep(self.check_delay)
-        
         while True:
             len_d = int.from_bytes(self.shutter.read(2), 'big')
 
             data = []
             if len_d > 256:
-                print('got garbage input')
+                print('got garbage input') # here I am assuming that no more than 256 data points are being sent at once
             else:
                 data = [0 for _ in range(len_d)]
             
                 for i in range(len_d):
-                    data[i] = int.from_bytes(self.shutter.read(2), 'big')
+                    data[i] = int.from_bytes(self.shutter.read(2), 'big', signed=True)
 
             while self.shutter.in_waiting > 0:
-                # val = self.shutter.read(2)
-                # data.append(int.from_bytes(val, 'big'))
                 ch = self.shutter.read(1)
                 try:
                     print(ch.decode(), end="")
@@ -56,7 +49,7 @@ class MiniShutter:
             if data:
                 print(f'{datetime.now()}\t\tdata ({len(data)}): {data}')
                 self.last_data_frame = data.copy()
-            
+
             time.sleep(self.check_delay)
 
     def write(self, path):
@@ -95,5 +88,6 @@ class MiniShutter:
         # This sends ctrl+D (EOT) which is the reload command
         self.shutter.write(b'\x04')
         
-    # def help(self):
-    #     self.shutter.write(b"h\r")
+    def help(self):
+        self.shutter.write(b"h\r")
+

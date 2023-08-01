@@ -11,5 +11,6 @@ from shutter import Shutter
 
 # how many values to send per recording_period (seconds)
 # pd is whether is has a photodiode or not. Should be automatically detected
-shutter = Shutter(data_buffer_size=2, recording_period=0.5, pd=True)
+shutter = Shutter(data_buffer_size=2, recording_period=0.5)
 shutter.start()
+
