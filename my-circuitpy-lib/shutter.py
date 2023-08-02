@@ -42,6 +42,7 @@ class Shutter:
         except:
             self.pd = False
 
+
         self.data_buffer_size = data_buffer_size
         self.recording_period = recording_period
 
@@ -80,10 +81,14 @@ class Shutter:
             self.sw1.update()
             self.sw2.update()
 
-            if self.sw1.fell:
+            if not self.sw1.value and not self.sw2.value:
+                self.mode = 'b'
+            elif self.sw1.fell:
                 self.open_shutter()
+                self.mode = 'o'
             elif self.sw2.fell:
                 self.close_shutter()
+                self.mode = 'c'
 
             self.receive_input()
             self.parse_input()
@@ -131,10 +136,7 @@ class Shutter:
         
         self.input_buffer = sys.stdin.readline().strip()
 
-        #sys.stdin.flush()
-        #sys.stdout.flush()
-
-        self.log.append(f'input received: {self.input_buffer}')
+        # self.log.append(f'input received: {self.input_buffer}')
 
     def parse_input(self):
         if not self.input_buffer:
@@ -146,47 +148,18 @@ class Shutter:
                 self.stop()
             elif ch == 'o':
                 self.open_shutter()
-                #self.write_string_to_buffer('open')
+                self.write_string_to_buffer('open')
                 self.mode = 'o'
             elif ch == 'c':
                 self.close_shutter()
-                #self.write_string_to_buffer('closed')
+                self.write_string_to_buffer('closed')
                 self.mode = 'c'
             elif ch == 'b':
                 self.oscillate()
-                #self.write_string_to_buffer('osc')
+                self.write_string_to_buffer('osc')
                 self.mode = 'b'
             elif ch == 'v':
                 self.read_and_write_value()
-                #self.write_string_to_buffer('read')
-
-    def process_buttons(self):
-        self.sw1.update()		# button debouncing
-        self.sw2.update()
-
-        if not self.sw1.value:
-            self.open_shutter()
-            
-            while not self.sw1.value:    # Wait for button to be released
-                if not self.sw2.value:	# if both buttons pushed
-                    self.mode = "b"
-                
-                self.sw1.update()
-                self.sw2.update()
-            
-            return
-            
-        if not self.sw2.value:
-            self.close_shutter()
-
-            while not self.sw2.value:    # Wait for button to be released
-                if not self.sw1.value:	# if both buttons pushed
-                    self.mode = ""
-                
-                self.sw1.update()
-                self.sw2.update()
-            
-            return
 
     def send_output(self):
         if not self.output_data_buffer:
@@ -194,12 +167,16 @@ class Shutter:
         
         out = b""
 
-        len_s = len(self.output_data_buffer)
+        len_d = len(self.output_data_buffer) // 2
         # unused for now
         # len_d = len(self.output_data_buffer)
-        #out += len_s
-        #out += self.output_string_buffer.encode()
-        out += self.output_data_buffer
+        
+        # Only send data if we actually have a (detected) photodiode
+        out += (0 if not self.pd else len_d).to_bytes(2, 'big', signed=True)
+        if self.pd:
+            out += self.output_data_buffer
+        
+        out += self.output_string_buffer.encode()
 
         sys.stdout.write(out)
 
@@ -213,10 +190,10 @@ class Shutter:
             sys.exit()
 
     def write_string_to_buffer(self, s):
-        self.output_string_buffer += s
+        self.output_string_buffer += s + '\n'
 
     def write_integer_to_buffer(self, i):
-        self.output_data_buffer += i.to_bytes(2, 'big')
+        self.output_data_buffer += i.to_bytes(2, 'big', signed=True)
 
     def open_shutter(self):
         self.led[0] = (0, 255, 0)
@@ -237,16 +214,19 @@ class Shutter:
             if self.opened:
                 self.led[0] = (50, 0, 0)
                 self.close_shutter()
-                self.mode = 'c'
+                self.mode = 'b'
                 self.opened = False
             else:
                 self.led[0] = (0, 0, 50)
                 self.open_shutter()
-                self.mode = 'o'
+                self.mode = 'b'
                 self.opened = True
 
     def read_and_write_value(self):
-        self.write_integer_to_buffer(0 if not self.pd else self.chan.value)
+        if self.pd:
+            self.write_string_to_buffer(f'val={-self.chan.value}')
+        else:
+            self.write_string_to_buffer('no photodiode')
 
     def stop(self):
         self.send_log(kill=True)

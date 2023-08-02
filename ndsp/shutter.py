@@ -208,7 +208,7 @@ class Shutter:
     def oscillate(self):
         now = time.monotonic()
     
-        if now - self.last_oscillation >= 0.01:
+        if now - self.last_oscillation >= 0.5:
             self.last_oscillation = now
 
             if self.opened:
