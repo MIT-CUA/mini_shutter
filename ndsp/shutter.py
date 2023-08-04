@@ -143,23 +143,34 @@ class Shutter:
             return
         
         for ch in self.input_buffer:
+            self.log.append(f'Command recieved: {ch}.')
             if ch == 's':
                 self.mode = 's'
                 self.stop()
             elif ch == 'o':
                 self.open_shutter()
                 self.write_string_to_buffer('open')
+                self.log.append('Shutter opened.')
                 self.mode = 'o'
             elif ch == 'c':
                 self.close_shutter()
                 self.write_string_to_buffer('closed')
+                self.log.append('Shutter closed.')
                 self.mode = 'c'
             elif ch == 'b':
                 self.oscillate()
                 self.write_string_to_buffer('osc')
+                self.log.append('Began oscillating.')
                 self.mode = 'b'
             elif ch == 'v':
                 self.read_and_write_value()
+                self.log.append('Read and sent value.')
+            elif ch == 'l':
+                self.log.append('Sending log.')
+                self.send_log()
+            elif ch == 'h':
+                self.write_string_to_buffer('Stop:\t\ts\nOpen shutter:\to\nClose shutter:\tc\nOscillate:\tb\nRead value:\tv\nSend log:\tl\n')
+                self.log.append('Help requested.')
 
     def send_output(self):
         if not self.output_data_buffer:
@@ -184,7 +195,7 @@ class Shutter:
         self.output_data_buffer = b""
 
     def send_log(self, kill=False):
-        sys.stdout.write(('\n'.join(self.log) + '\n').encode())
+        self.write_string_to_buffer('\n'.join(self.log) + '\n')
 
         if kill:
             sys.exit()
@@ -224,10 +235,9 @@ class Shutter:
 
     def read_and_write_value(self):
         if self.pd:
-            self.write_string_to_buffer(f'val={-self.chan.value}')
+            self.write_string_to_buffer(f'val={self.chan.value}')
         else:
             self.write_string_to_buffer('no photodiode')
 
     def stop(self):
         self.send_log(kill=True)
-

@@ -36,8 +36,8 @@ class MiniShutter:
             else:
                 data = [0 for _ in range(len_d)]
             
-                for i in range(len_d):
-                    data[i] = int.from_bytes(self.shutter.read(2), 'big', signed=True)
+                for i in range(len_d - 1, -1, -1):
+                    data[i] = int.from_bytes(self.shutter.read(2), 'big')
 
             while self.shutter.in_waiting > 0:
                 ch = self.shutter.read(1)
@@ -45,7 +45,7 @@ class MiniShutter:
                     print(ch.decode(), end="")
                 except:
                     print('couldn\'t parse')
-            
+
             if data:
                 print(f'{datetime.now()}\t\tdata ({len(data)}): {data}')
                 self.last_data_frame = data.copy()
@@ -87,7 +87,15 @@ class MiniShutter:
     def reload(self):
         # This sends ctrl+D (EOT) which is the reload command
         self.shutter.write(b'\x04')
+
+    # Stop the currently running program on the rp2040
+    def kill_program(self):
+        # This sends ctrl+C, should stop execution
+        # not
+        self.shutter.write(b'\x03')
         
     def help(self):
         self.shutter.write(b"h\r")
 
+    def log(self):
+        self.shutter.write(b"l\r")
