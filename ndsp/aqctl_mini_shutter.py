@@ -3,7 +3,10 @@ import argparse
 import logging
 from sipyco.pc_rpc import simple_server_loop
 from sipyco import common_args
-from driver import ShutterHandler 
+from driver import InfluxDBWriter, ShutterHandler
+
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +60,12 @@ def get_argparser():
         default=0.1,
         type=float
     )
+    parser.add_argument(
+        '--name',
+        help='Name for the shutter or power monitor',
+        default='no_name_given',
+        type=str
+    )
 
     return parser
 
@@ -76,11 +85,21 @@ def main():
         serial_port=args.serial_port,
         baudrate=args.baudrate,
         timeout=args.timeout,
-        check_delay=args.check_delay)
+        check_delay=args.check_delay,
+        name=args.name)
+
+    token = "ZrEoGqLx_FTx6_ZIXeRcUd7t-79XJw-u9j4McL55iKyPCyuWk9Tdwz33ig2pU09LG1jJT0Lz4oDFX6UMqoyW1w=="
+    org = "Quanta Lab"
+    bucket = "laser_power_monitors"
+    client = InfluxDBClient(url="http://192.168.5.232:8086", token=token)
+
+    write_api = client.write_api(write_options=SYNCHRONOUS)
+
+    writer = InfluxDBWriter(dev, bucket=bucket, org=org, write_api=write_api)
 
     try:
         simple_server_loop(
-            {"mini_shutter": dev},
+            {"mini_shutter": dev, "writer": writer},
             common_args.bind_address_from_args(args),
             args.port,
         )
