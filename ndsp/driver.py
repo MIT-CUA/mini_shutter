@@ -4,98 +4,122 @@ from datetime import datetime
 import threading
 import os
 import numpy
-import matplotlib
-from matplotlib import pyplot as plt
+import sys
 
-
-class MiniShutter:
-    """For controlling mini shutter
+class ShutterHandler:
+    '''
+    Handles all communication with shutters and/or photodiodes
+    '''
     
-    see https://github.mit.edu/quanta/mini_shutter for detail on the shutters
-    """
-    def __init__(self, serial_port='/dev/ttyACM6', baudrate=9600, timeout=0.1, check_delay=0.1):
-        self.shutter = serial.Serial(port=serial_port, baudrate=baudrate, timeout=timeout)
-
+    def __init__(
+            self,
+            photodiode=False,
+            shutter=True,
+            debug=False,
+            serial_port='/dev/ttyACM0',
+            baudrate=115200,
+            timeout=0.1,
+            check_delay=0.05):
+        '''
+        Initialize all variables and serial connection.
+        photodiode: boolean representing whether desired module has a photodiode
+        shutter: boolean representing whether desired module has a shutter
+        serial_port: string representing the serial port connection name
+        baudrate: int representing the connection baudrate
+        timeout: float representing how long until timeout when connecting
+        check_delay: float representing how often to check for data from connection
+        '''
+        
+        self.connection = serial.Serial(port=serial_port, baudrate=baudrate, timeout=timeout)
         self.check_delay = check_delay
+        
+        self.photodiode = photodiode
+        self.shutter = shutter
 
-        self.last_data_frame = []
-        self.Y = [0] * 64
+        if debug:
+            self._comm_thread = threading.Thread(target=self.send_through, daemon=True)
+            self._comm_thread.start()
 
-        self._read_thread = threading.Thread(target=self.begin_reading, daemon=True)
-        self._read_thread.start()
-
-    # reads serial data from shutter (such as print statements)
-    # includes data this sends to it
-    def begin_reading(self):
-        while True:
-            len_d = int.from_bytes(self.shutter.read(2), 'big')
-
-            data = []
-            if len_d > 256:
-                print('got garbage input') # here I am assuming that no more than 256 data points are being sent at once
-            else:
-                data = [0 for _ in range(len_d)]
+        if self.photodiode:
+            self.last_data_frame = []
             
-                for i in range(len_d - 1, -1, -1):
-                    data[i] = int.from_bytes(self.shutter.read(2), 'big')
+        self._comm_thread = threading.Thread(target=self.begin_communicating, daemon=True)
+        self._comm_thread.start()
 
-            while self.shutter.in_waiting > 0:
-                ch = self.shutter.read(1)
-                try:
-                    print(ch.decode(), end="")
-                except:
-                    print('couldn\'t parse')
+    def send_through(self):
+        while True:
+            while self.connection.in_waiting > 0:
+                print(self.connection.read_until(expected='\r\n').decode(), end='')
 
-            if data:
-                print(f'{datetime.now()}\t\tdata ({len(data)}): {data}')
-                self.last_data_frame = data.copy()
+            time.sleep(self.check_delay)
+    
+    def begin_communicating(self):
+        if not self.photodiode:
+            # Since we don't have a photodiode just read data forever.
+            # This only ends once self.disconnect() is called.
+            self.send_through()
+
+        while True:
+            if self.connection.in_waiting > 0:
+                all = self.connection.read_all().replace(b'\r\n', b'\n')
+
+                if all[-2:] != b'\n\n':
+                    print('########### Invalid transmission recieved ###########')
+                    continue
+                
+                recs = [i + b'\n\n' for i in all[:-2].split(b'\n\n')]
+
+                for rec in recs:
+                    if rec[0] == 0 and rec[1] == 0 and rec[2] == 127:
+                        # Recieved string transmission
+                        print(rec[3:-1].decode(), end='')
+                    elif rec[0] == 0 and rec[1] == 127:
+                        # Recieved data transmission
+                        data = [int.from_bytes(rec[i:i+2], 'big') for i in range(2, len(rec[2:-1]), 2)]
+                        
+                        print(f'{datetime.now()}\tdata ({len(data)}): {data}')
+                    else:
+                        print('########### Invalid transmission ###########')
 
             time.sleep(self.check_delay)
 
-    def write(self, path):
-        if not os.path.isfile(path):
-            with open(path, 'w+') as _:
-                pass
-
-        with open(path, 'a') as out:
-            out.write(f'{datetime.now()}: {self.last_data_frame}\n')
-
-    def stats(self):
-        arr = numpy.array(self.last_data_frame)
-
-        print(f'len: {len(arr)}, avg: {arr.mean()}, stdev: {arr.std()}')
-
     def stop(self):
-        self.shutter.write(b"s\r")
+        # Forces RP2040 into REPL
+        self.connection.write(b's\n')
+    
+    def disconnect(self):
+        # Closes serial connection
+        self.connection.close()
+        sys.exit()
 
     def open(self):
-        self.shutter.write(b"o\r")
+        # Opens shutter
+        self.connection.write(b'o\n')
 
     def close(self):
-        self.shutter.write(b"c\r")
-        
+        # Closes shutter
+        self.connection.write(b'c\n')
+
     def oscillate(self):
-        self.shutter.write(b"b\r")
+        # Oscillates shutter every 0.5s
+        self.connection.write(b'b\n')
 
     def read_value(self):
-        self.shutter.write(b"v\r")
+        # Read and print singular photodiode value
+        self.connection.write(b'v\n')
 
-    def write_string(self, s):
-        self.shutter.write(f'{s}\r'.encode())
-
-    # Reload rp2040 if in REPL (Im pretty sure)
     def reload(self):
-        # This sends ctrl+D (EOT) which is the reload command
-        self.shutter.write(b'\x04')
+        # Reloads RP2040 from REPL into main.py
+        self.connection.write(b'\x04') # Sends ctrl+D
 
-    # Stop the currently running program on the rp2040
-    def kill_program(self):
-        # This sends ctrl+C, should stop execution
-        # not
-        self.shutter.write(b'\x03')
-        
-    def help(self):
-        self.shutter.write(b"h\r")
+    def kill(self):
+        # Kills process running on RP2040 and forces into REPL (quickly)
+        self.connection.write(b'\x03') # Sends ctrl+C
 
     def log(self):
-        self.shutter.write(b"l\r")
+        # Sends log of actions back through serial connection
+        self.connection.write(b'l\n')
+
+    def write_char(self, ch):
+        # Write a single arbitrary character followed by '\r' to RP2040
+        self.connection.write((ch + '\n').encode())
