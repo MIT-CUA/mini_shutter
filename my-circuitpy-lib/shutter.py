@@ -1,17 +1,23 @@
 import time
 import board
-import busio
 import neopixel
 import supervisor
 import sys
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
 from digitalio import DigitalInOut, Direction, Pull
 from adafruit_debouncer import Debouncer
 
-
 class Shutter:
-    def __init__(self, data_buffer_size=1, recording_period=0.5, pd=None):
+    '''
+    Class for a module with a shutter.
+    Only handles recieving commands for shutter, sends no data besides logs (maybe)
+    '''
+
+    def __init__(self, log_length=128, led_brightness=128):
+        '''
+        Initialize all board pinouts and variables necessary
+        log_length: int which represents maximum log entries to track, default 128
+        '''
+
         self.BUTTON_PIN1 = board.GP12
         self.BUTTON_PIN2 = board.GP10
         self.SHUTTER_PIN = board.GP7
@@ -34,49 +40,33 @@ class Shutter:
         self.led = neopixel.NeoPixel(board.GP16, 1)
         self.led.brightness = 0.3
 
-        try:
-            self.i2c = busio.I2C(board.GP15, board.GP14)
-            self.ads = ADS.ADS1115(self.i2c)
-            self.chan = AnalogIn(self.ads, ADS.P0)
-            self.pd = pd if pd is not None else True
-        except:
-            self.pd = False
-
-
-        self.data_buffer_size = data_buffer_size
-        self.recording_period = recording_period
-
-        self.input_buffer = b""
-        self.output_string_buffer = ""
-        self.output_data_buffer = b""
-        self.photodiode_buffer = [0] * self.data_buffer_size
-        self.pd_buffer_pos = 0
-
         self.mode = 'c'
         self.opened = False
         self.last_oscillation = time.monotonic()
 
         self.log = []
+        self.log_length = log_length
+
+        self.led_brightness = led_brightness
 
         # flicker LED's and open shutter on startup
-        self.led[0] = (5, 0, 0)
+        self.led[0] = (25, 0, 0)
         time.sleep(0.1)
-        self.led[0] = (0, 5, 0)
+        self.led[0] = (0, 25, 0)
         time.sleep(0.1)
-        self.led[0] = (0, 0, 5)
+        self.led[0] = (0, 0, 25)
         time.sleep(0.1)
         self.led[0] = (0, 0, 0)
-        
-        self.open_shutter()
 
+        self.open_shutter()
         self.start()
 
     def start(self):
-        delta = self.recording_period / self.data_buffer_size
+        '''
+        Begin the shutters main loop.
+        Recieves inputs and opens/closes the shutters accordingly.
+        '''
         
-        last_print = time.monotonic()
-        last_read = time.monotonic()
-
         while True:
             self.sw1.update()
             self.sw2.update()
@@ -90,154 +80,92 @@ class Shutter:
                 self.close_shutter()
                 self.mode = 'c'
 
-            self.receive_input()
-            self.parse_input()
-
-            self.input_buffer = b""
+            self.parse_input(self.recieve_input())
 
             if self.mode == 'b':
                 self.oscillate()
 
-            now = time.monotonic()
-            if now - last_print >= self.recording_period:
-                ind = self.pd_buffer_pos + 1
+    def recieve_input(self):
+        '''
+        Get input. Uses input() which seems to be the best way (according to adafruit)
+        '''
 
-                for offset in range(self.data_buffer_size):
-                    self.write_integer_to_buffer(self.photodiode_buffer[(ind + offset) % self.data_buffer_size])
-
-                last_print = now
-
-            now = time.monotonic()
-            if now - last_read >= delta:
-                last_read = now
-                value = 0 if not self.pd else self.chan.value
-
-                self.photodiode_buffer[self.pd_buffer_pos] = value
-                self.pd_buffer_pos += 1
-                self.pd_buffer_pos %= self.data_buffer_size
-
-            self.send_output()
-
-    def try_create_pd_connection(self):
-        try:
-            self.i2c = busio.I2C(board.GP15, board.GP14)
-            self.ads = ADS.ADS1115(self.i2c)
-            self.chan = AnalogIn(self.ads, ADS.P0)
-            self.pd = True
-        except:
-            self.pd = False
-
-        return self.pd
-
-    def receive_input(self):
         if not supervisor.runtime.serial_bytes_available:
-            self.input_buffer = b""
+            return ''
+        
+        return sys.stdin.readline()
+    
+    def parse_input(self, inp):
+        '''
+        Parse the input which it gets and do actions on it. Must be '\n' separated if multiple.
+        Can handle multiple at once but this will probably be rare.
+        '''
+
+        if not inp:
             return
         
-        self.input_buffer = sys.stdin.readline().strip()
+        for ch in inp.strip().split('\n'):
+            entry = f'Command recieved: {ch}'
 
-        # self.log.append(f'input received: {self.input_buffer}')
-
-    def parse_input(self):
-        if not self.input_buffer:
-            return
-        
-        for ch in self.input_buffer:
-            self.log.append(f'Command recieved: {ch}.')
             if ch == 's':
                 self.mode = 's'
                 self.stop()
             elif ch == 'o':
+                sys.stdout.write('open\n'.encode())
                 self.open_shutter()
-                self.write_string_to_buffer('open')
-                self.log.append('Shutter opened.')
+                entry += '\nShutter opened.'
                 self.mode = 'o'
             elif ch == 'c':
+                sys.stdout.write('close\n'.encode())
                 self.close_shutter()
-                self.write_string_to_buffer('closed')
-                self.log.append('Shutter closed.')
+                entry += '\nShutter closed.'
                 self.mode = 'c'
             elif ch == 'b':
                 self.oscillate()
-                self.write_string_to_buffer('osc')
-                self.log.append('Began oscillating.')
+                entry += '\nBegan oscillating.'
                 self.mode = 'b'
-            elif ch == 'v':
-                self.read_and_write_value()
-                self.log.append('Read and sent value.')
             elif ch == 'l':
-                self.log.append('Sending log.')
+                entry += '\nSending log.'
+                self.log.append(entry)
                 self.send_log()
-            elif ch == 'h':
-                self.write_string_to_buffer('Stop:\t\ts\nOpen shutter:\to\nClose shutter:\tc\nOscillate:\tb\nRead value:\tv\nSend log:\tl\n')
-                self.log.append('Help requested.')
+                entry = 'Just sent log.'
 
-    def send_output(self):
-        if not self.output_data_buffer:
-            return
-        
-        out = b""
+            self.log.append(entry)
 
-        len_d = len(self.output_data_buffer) // 2
-        # unused for now
-        # len_d = len(self.output_data_buffer)
-        
-        # Only send data if we actually have a (detected) photodiode
-        out += (0 if not self.pd else len_d).to_bytes(2, 'big', signed=True)
-        if self.pd:
-            out += self.output_data_buffer
-        
-        out += self.output_string_buffer.encode()
+            if len(self.log) > self.log_length:
+                self.log.remove(0)
 
-        sys.stdout.write(out)
+    def stop(self):
+        # Exits to REPL
+        sys.exit()
 
-        self.output_string_buffer = ""
-        self.output_data_buffer = b""
-
-    def send_log(self, kill=False):
-        self.write_string_to_buffer('\n'.join(self.log) + '\n')
-
-        if kill:
-            sys.exit()
-
-    def write_string_to_buffer(self, s):
-        self.output_string_buffer += s + '\n'
-
-    def write_integer_to_buffer(self, i):
-        self.output_data_buffer += i.to_bytes(2, 'big', signed=True)
+    def send_log(self):
+        # Sends log and clears
+        sys.stdout.write(('\n'.join(self.log) + '\n').encode())
+        self.log = []
 
     def open_shutter(self):
-        self.led[0] = (0, 255, 0)
+        # Opens the shutter
+        self.led[0] = (0, self.led_brightness, 0)
         self.shutter_pin.value = True
         self.led[0] = (0, 0, 0)
 
     def close_shutter(self):
-        self.led[0] = (255, 0, 0)
+        # Closes the shutter
+        self.led[0] = (self.led_brightness, 0, 0)
         self.shutter_pin.value = False
         self.led[0] = (0, 0, 0)
-
-    def oscillate(self):
-        now = time.monotonic()
     
+    def oscillate(self):
+        # Oscillates every 0.5s. Called when self.mode == 'b' (back and forth)
+        now = time.monotonic()
+
         if now - self.last_oscillation >= 0.5:
             self.last_oscillation = now
 
             if self.opened:
-                self.led[0] = (50, 0, 0)
                 self.close_shutter()
-                self.mode = 'b'
                 self.opened = False
             else:
-                self.led[0] = (0, 0, 50)
                 self.open_shutter()
-                self.mode = 'b'
                 self.opened = True
-
-    def read_and_write_value(self):
-        if self.pd:
-            self.write_string_to_buffer(f'val={self.chan.value}')
-        else:
-            self.write_string_to_buffer('no photodiode')
-
-    def stop(self):
-        self.send_log(kill=True)
