@@ -16,6 +16,7 @@ class Shutter:
         '''
         Initialize all board pinouts and variables necessary
         log_length: int which represents maximum log entries to track, default 128
+        led_brightness: int[0, 255] representing led brightness (so you can turn them off if you want)
         '''
 
         self.BUTTON_PIN1 = board.GP12
@@ -87,7 +88,7 @@ class Shutter:
 
     def recieve_input(self):
         '''
-        Get input. Uses input() which seems to be the best way (according to adafruit)
+        Get input. Uses sys.stdin.readline() which seems to be the most consistent
         '''
 
         if not supervisor.runtime.serial_bytes_available:

@@ -3,10 +3,7 @@ import argparse
 import logging
 from sipyco.pc_rpc import simple_server_loop
 from sipyco import common_args
-from driver import InfluxDBWriter, ShutterHandler
-
-from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
+from driver import ShutterHandler
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +74,7 @@ def main():
     if args.baudrate not in [50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, 115200]:
         args.baudrate = 115200
 
-    print('handler made')
+    print('Shutter handler made')
     dev = ShutterHandler(
         photodiode=args.photodiode,
         shutter=args.shutter,
@@ -88,22 +85,14 @@ def main():
         check_delay=args.check_delay,
         name=args.name)
 
-    token = "ZrEoGqLx_FTx6_ZIXeRcUd7t-79XJw-u9j4McL55iKyPCyuWk9Tdwz33ig2pU09LG1jJT0Lz4oDFX6UMqoyW1w=="
-    org = "Quanta Lab"
-    bucket = "laser_power_monitors"
-    client = InfluxDBClient(url="http://192.168.5.232:8086", token=token)
-
-    write_api = client.write_api(write_options=SYNCHRONOUS)
-
-    writer = InfluxDBWriter(dev, bucket=bucket, org=org, write_api=write_api)
-
     try:
         simple_server_loop(
-            {"mini_shutter": dev, "writer": writer},
+            {"mini_shutter": dev},
             common_args.bind_address_from_args(args),
             args.port,
         )
-    finally:
+    except Exception as e:
+        print(f'Device disconnected with error:\n{e}')
         dev.disconnect()
 
 
