@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+<<<<<<< Updated upstream
+=======
+import sys
+import os
+>>>>>>> Stashed changes
 from sipyco.pc_rpc import simple_server_loop
 from sipyco import common_args
 from driver import ShutterHandler
@@ -63,6 +68,19 @@ def get_argparser():
         default='no_name_given',
         type=str
     )
+<<<<<<< Updated upstream
+=======
+    parser.add_argument(
+        '--no_print',
+        help='Print nothing to stdout if present',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--auto_write',
+        help='Automatically start writing to InfluxDB if present',
+        action='store_true'
+    )
+>>>>>>> Stashed changes
 
     return parser
 
@@ -74,6 +92,12 @@ def main():
     if args.baudrate not in [50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, 115200]:
         args.baudrate = 115200
 
+<<<<<<< Updated upstream
+=======
+    if args.no_print:
+        sys.stdout = open(os.devnull, 'w')
+
+>>>>>>> Stashed changes
     print('Shutter handler made')
     dev = ShutterHandler(
         photodiode=args.photodiode,
@@ -83,7 +107,15 @@ def main():
         baudrate=args.baudrate,
         timeout=args.timeout,
         check_delay=args.check_delay,
+<<<<<<< Updated upstream
         name=args.name)
+=======
+        name=args.name,
+        no_print=args.no_print)
+    
+    if args.auto_write:
+        dev.start_writing()
+>>>>>>> Stashed changes
 
     try:
         simple_server_loop(

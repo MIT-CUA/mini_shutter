@@ -21,6 +21,11 @@ class Photodiode:
         data_buffer_size: int representing how many data points to read inbetween sends.
         recording_period: float representing how long to record before sending.
         shutter: boolean representing whether this module has a shutter.
+<<<<<<< Updated upstream
+=======
+        log_length: int representing how many log entries to keep track of
+        led_brightness: int[0, 255] representing led brightness (so you can turn them off if you want)
+>>>>>>> Stashed changes
         '''
 
         self.shutter = shutter
@@ -45,9 +50,15 @@ class Photodiode:
             self.sw1 = Debouncer(self.button1)
             self.sw2 = Debouncer(self.button2)
 
+<<<<<<< Updated upstream
             self.mode = 'c'
             self.opened = False
             self.last_oscillation = time.monotonic()
+=======
+        self.mode = 'c'
+        self.opened = False
+        self.last_oscillation = time.monotonic()
+>>>>>>> Stashed changes
 
         self.led = neopixel.NeoPixel(board.GP16, 1)
         self.led.brightness = 0.3
@@ -90,6 +101,7 @@ class Photodiode:
         last_send = time.monotonic()
 
         while True:
+<<<<<<< Updated upstream
             self.sw1.update()
             self.sw2.update()
 
@@ -101,6 +113,20 @@ class Photodiode:
             elif self.sw2.fell:
                 self.close_shutter()
                 self.mode = 'c'
+=======
+            if self.shutter:
+                self.sw1.update()
+                self.sw2.update()
+
+                if not self.sw1.value and not self.sw2.value:
+                    self.mode = 'b'
+                elif self.sw1.fell:
+                    self.open_shutter()
+                    self.mode = 'o'
+                elif self.sw2.fell:
+                    self.close_shutter()
+                    self.mode = 'c'
+>>>>>>> Stashed changes
 
             self.parse_input(self.recieve_input())
 
@@ -146,7 +172,11 @@ class Photodiode:
 
     def recieve_input(self):
         '''
+<<<<<<< Updated upstream
         Get input. Uses input() which seems to be the best way (according to adafruit)
+=======
+        Get input. Uses sys.stdin.readline() which seems to be the most consistent
+>>>>>>> Stashed changes
         '''
 
         if not supervisor.runtime.serial_bytes_available:
@@ -156,7 +186,11 @@ class Photodiode:
     
     def parse_input(self, inp):
         '''
+<<<<<<< Updated upstream
         Parse the input which it gets and do actions on it. Must be '\r' separated if multiple.
+=======
+        Parse the input which it gets and do actions on it. Must be '\n' separated if multiple.
+>>>>>>> Stashed changes
         Can handle multiple at once but this will probably be rare.
         '''
 
@@ -230,7 +264,11 @@ class Photodiode:
         self.led[0] = (0, 0, 0)
         
     def oscillate(self):
+<<<<<<< Updated upstream
         # Oscillates every 0.5s. Called when self.mode == 'b' (back and forth)
+=======
+        # Oscillates every 0.5s. Called when self.mode == 'b' (Back and forth)
+>>>>>>> Stashed changes
         now = time.monotonic()
 
         if now - self.last_oscillation >= 0.5:
