@@ -3,3 +3,5 @@
 *.pyc
 mp4*
 OLD
+ndsp/calibrations
+

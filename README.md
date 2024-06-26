@@ -45,4 +45,4 @@ Also, the camera shutter module has another solenoid which moves some kind of fi
 
 ## code
 
-See [camera_shutter.py](camera_shutter.py)
+See [camera_shutter.py](camera_shutter.py). New code in [main.py](ndsp/main.py), [shutter.py](ndsp/shutter.py), [photodiode.py](ndsp/photodiode.py), and [boot.py](ndsp/boot.py).
